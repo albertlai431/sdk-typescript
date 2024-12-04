@@ -756,6 +756,40 @@ export async function startChild<T extends Workflow>(
         headers: {},
       });
     },
+    cancel() {
+      return new Promise<void>((resolve, reject) => {
+        // Connect this cancel operation to the current cancellation scope.
+        // This is behavior was introduced after v0.22.0 and is incompatible
+        // with histories generated with previous SDK versions and thus requires
+        // patching.
+        //
+        // We try to delay patching as much as possible to avoid polluting
+        // histories unless strictly required.
+        const scope = CancellationScope.current();
+        if (scope.cancellable) {
+          untrackPromise(
+            scope.cancelRequested.catch((err) => {
+              if (patched(EXTERNAL_WF_CANCEL_PATCH)) {
+                reject(err);
+              }
+            })
+          );
+        }
+        if (scope.consideredCancelled) {
+          if (patched(EXTERNAL_WF_CANCEL_PATCH)) {
+            return;
+          }
+        }
+
+        const seq = activator.nextSeqs.cancelWorkflow++;
+        activator.pushCommand({
+          cancelChildWorkflowExecution: {
+            childWorkflowSeq: activator.nextSeqs.childWorkflow
+          },
+        });
+        activator.completions.cancelWorkflow.set(seq, { resolve, reject });
+      });
+    },
   };
 }
 

@@ -60,6 +60,13 @@ export interface ExternalWorkflowHandle {
  */
 export interface ChildWorkflowHandle<T extends Workflow> extends BaseWorkflowHandle<T> {
   /**
+   * Cancel the child Workflow execution.
+   *
+   * Throws if the Workflow execution does not exist.
+   */
+    cancel(): Promise<void>;
+
+  /**
    * The runId of the initial run of the bound Workflow
    */
   readonly firstExecutionRunId: string;
