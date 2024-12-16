@@ -62,7 +62,7 @@ export interface ChildWorkflowHandle<T extends Workflow> extends BaseWorkflowHan
   /**
    * Cancel the child Workflow execution.
    *
-   * Throws if the Workflow execution does not exist.
+   * Throws if the Workflow execution does not exist or is already completed.
    */
     cancel(): Promise<void>;
 

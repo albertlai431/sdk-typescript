@@ -726,8 +726,9 @@ export async function startChild<T extends Workflow>(
     'startChildWorkflowExecution',
     startChildWorkflowExecutionNextHandler
   );
+  const childSeq = activator.nextSeqs.childWorkflow++
   const [started, completed] = await execute({
-    seq: activator.nextSeqs.childWorkflow++,
+    seq: childSeq,
     options: optionsWithDefaults,
     headers: {},
     workflowType,
@@ -781,13 +782,12 @@ export async function startChild<T extends Workflow>(
           }
         }
 
-        const seq = activator.nextSeqs.cancelWorkflow++;
         activator.pushCommand({
           cancelChildWorkflowExecution: {
-            childWorkflowSeq: activator.nextSeqs.childWorkflow
+            childWorkflowSeq: childSeq
           },
         });
-        activator.completions.cancelWorkflow.set(seq, { resolve, reject });
+        activator.completions.childWorkflowComplete.set(childSeq, { resolve, reject });
       });
     },
   };
