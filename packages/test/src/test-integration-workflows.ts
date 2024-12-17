@@ -1257,6 +1257,51 @@ test("WorkflowInfo().lastFailure contains last run's failure on Workflow Failure
   });
 });
 
+// TODO(thomas): why is this not necessary for the other usages of workflows.signalTarget?
+export { signalTarget } from './workflows';
+
+// Child cancellations using the cancel method on the ChildWorkflowHandle
+export async function cancelChildWorkflowHandle(): Promise<void> {
+  // Cancellation of running workflow
+  try {
+    await workflow.CancellationScope.cancellable(async () => {
+      const handle = await workflow.startChild(workflows.signalTarget);
+      await handle.cancel();
+      await handle.result();
+      throw new Error('ChildWorkflow was not cancelled');
+    });
+    throw new Error('Expected to throw ChildWorkflowFailure');
+  } catch (err) {
+    if (!(err instanceof workflow.ChildWorkflowFailure && err.cause instanceof workflow.CancelledFailure)) {
+      throw err;
+    }
+  }
+
+  // Expect error on completed workflow (TODO: hangs)
+  // try {
+  //   await workflow.CancellationScope.cancellable(async () => {
+  //     const handle = await workflow.startChild(workflows.signalTarget);
+  //     await handle.signal(workflows.unblockSignal);
+  //     await handle.result();
+  //     await handle.cancel();
+  //     throw new Error('Completed ChildWorkflow was cancelled');
+  //   });
+  //   throw new Error('Expected to throw error');
+  // } catch (err) {
+  //   if (!(err instanceof workflow.ChildWorkflowFailure && err.cause instanceof workflow.CancelledFailure)) {
+  //     throw err;
+  //   }
+  // }
+}
+
+test('Child workflow handle cancels properly', async (t) => {
+  const { executeWorkflow, createWorker } = helpers(t);
+  const worker = await createWorker();
+  await worker.runUntil(executeWorkflow(cancelChildWorkflowHandle));
+  // Assertions in workflow code.
+  t.pass()
+});
+
 export const interceptors: workflow.WorkflowInterceptorsFactory = () => {
   const interceptorsFactoryFunc = module.exports[`${workflow.workflowInfo().workflowType}Interceptors`];
   if (typeof interceptorsFactoryFunc === 'function') {
